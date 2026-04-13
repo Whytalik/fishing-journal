@@ -7,7 +7,7 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
-      const isOnProtectedPath = ["/sessions", "/stats", "/settings"].some(
+      const isOnProtectedPath = ["/sessions", "/stats", "/settings", "/species"].some(
         (path) => nextUrl.pathname.startsWith(path)
       )
 
@@ -20,3 +20,5 @@ export const authConfig = {
   },
   providers: [], // providers are added in auth.ts
 } satisfies NextAuthConfig
+
+export default authConfig;
