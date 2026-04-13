@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum FishingType {
+  HERABUNA
+  FLOAT // Поплавочна
+  SPINNING // Спінінгова
+  FEEDER // Фідерна
+  OTHER
+}
+
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+}
+
+// NextAuth Models
+model User {
+  id              String           @id @default(cuid())
+  name            String?
+  email           String?          @unique
+  emailVerified   DateTime?
+  image           String?
+  password        String? // Поле для хешованого пароля
+  accounts        Account[]
+  sessions        Session[]
+  fishingSessions FishingSession[]
+  fishSpecies     FishSpecies[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model FishSpecies {
+  id   String @id @default(cuid())
+  name String
+
+  // Link to User (null means global default)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FishingSession {
+  id     String        @id @default(cuid())
+  status SessionStatus @default(COMPLETED)
+  date   DateTime      @default(now())
+
+  // Link to User
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  locationName  String
+  latitude      Float?
+  longitude     Float?
+  spotName      String?
+  startTime     DateTime?
+  endTime       DateTime?
+  peakStartTime DateTime? // Час початку найкращого кльову
+  peakEndTime   DateTime? // Час завершення найкращого кльову
+  fishingType   FishingType @default(FLOAT)
+  fishType      String? // Цельова риба
+  bait          String?
+  depth         Float?
+  catchesCount  Int         @default(0)
+  totalWeight   Float? // в кг
+  notes         String?
+  weatherJson   Json? // JSON поле для розширених даних про погоду
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  catches Catch[]
+}
+
+model Catch {
+  id              String   @id @default(cuid())
+  species         String
+  weight          Float? // в кг
+  length          Float? // в см
+  bait            String?
+  caughtAt        DateTime @default(now())
+  weatherSnapshot Json? // Погода саме в момент улову
+  photoUrl        String?
+
+  sessionId String
+  session   FishingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+}
